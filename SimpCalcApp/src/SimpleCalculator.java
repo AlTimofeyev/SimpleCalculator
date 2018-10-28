@@ -1,5 +1,5 @@
 /**
- * @Author: AlTimofeyev
+ * @Author: Al Timofeyev
  * @Date:   Oct 26, 2018
  * @Desc:
  */
@@ -10,171 +10,342 @@ import java.util.Stack;
 public class SimpleCalculator
 {
     public static String expression;
-    public static boolean syntaxValid = true;
-    public Stack<Double> values = new Stack<Double>();
-    public Stack<String> ops = new Stack<String>();
-    public char[] tokens;
+    public static Stack<Double> values = new Stack<Double>();
+    public static Stack<String> ops = new Stack<String>();
+    public static double answer;
 
     public static void main(String[] args)
     {
-        expression = "-23+98*(2+2)";
+        expression = "((2+3/)(4/-";
 
-        if(!syntaxValid)
-            System.out.println("THE SYNTAX OF ARITHMETIC EXPRESSION IS INVALID");
-
-
-        //System.out.println(new SimpleCalculator().evaluate(expression));
+        if(new SimpleCalculator().evaluateExpression())
+            System.out.println("This is the answer: " + answer);
+        else
+            System.out.println("Syntax Error!");
     }
 
     // Format the expression and check for syntax errors.
-    void formatExpression()
+    public boolean evaluateExpression()
     {
-        String newExpression = "";
-        String str = null;
+        String number;
+        String str;
         String strBefore = null;
         String strAfter = null;
         int parenthesesCounter = 0;
-        boolean isItNegative = false;
+        boolean decimalFound = false;
 
+        // Evaluate the whole arithmetic expression.
         for (int i = 0; i < expression.length(); i++)
         {
-            isItNegative = false;
-
-            str = expression.substring(i);
+            number = "";
+            str = expression.substring(i, i+1);
             if (i != 0)
-                strBefore = expression.substring(i-1);
+                strBefore = expression.substring(i-1, i);
             if (i != expression.length()-1)
-                strAfter = expression.substring(i+1);
+                strAfter = expression.substring(i+1, i+2);
+            else
+                strAfter = null;
 
             // Skip over whitespace.
             if(str.equals(" "))
                 continue;
+
+            // If it's a number.
+            else if(!(Character.digit(str.charAt(0),10) < 0))
+            {
+                // While the next value is a digit or a decimal.
+                while(i < expression.length() && (!(Character.digit(str.charAt(0),10) < 0) || str.equals(".")))
+                {
+                    // If the str is a decimal.
+                    if(str.equals("."))
+                    {
+                        // If there was a decimal found already or
+                        // if the number string is empty.
+                        if(decimalFound || number.length() == 0)
+                            return false;
+
+                        // Else if there's at least one digit in number.
+                        else
+                            number += str;
+
+                        decimalFound = true;
+                    }
+
+                    // Else, just add the digit to number.
+                    else
+                        number += str;
+
+                    // Increment i for the while loop.
+                    i++;
+
+                    // Set the next string value.
+                    if(i < expression.length())
+                        str = expression.substring(i, i+1);
+                }
+
+                // After exiting while loop, reset the i index to previous value for the For loop.
+                i--;
+
+                // If the number is a decimal value, add a zero to it.
+                // This is to avoid things like "12.", where there are no
+                // digits after the decimal.
+                if(decimalFound)
+                    number += "0";
+
+                // Reset the decimal flag to false.
+                decimalFound = false;
+
+                // Add the number to values stack.
+                values.push(Double.parseDouble(number));
+            }
 
             // If it's an opening parenthesis.
             else if(str.equals("("))
             {
                 // If there's a number before it.
                 if(strBefore != null && !(Character.digit(strBefore.charAt(0),10) < 0))
-                {
-                    syntaxValid = false;
-                    break;
-                }
+                    return false;
 
                 // If there's a closing parentheses without an opening one.
                 if(parenthesesCounter < 0)
-                {
-                    syntaxValid = false;
-                    break;
-                }
+                    return false;
 
                 // Increment the parenthesesCounter and push onto operator stack.
                 parenthesesCounter++;
                 ops.push(str);
             }
 
-            // If it's a closing parenthesis.
+            // If it's a closing parenthesis, solve the entire parentheses.
             else if(str.equals(")"))
             {
                 // If there's an operator before it.
                 if(strBefore != null && (strBefore.equals("+") || strBefore.equals("-") ||
                         strBefore.equals("/") || strBefore.equals("*") || strBefore.equals("^")))
-                {
-                    syntaxValid = false;
-                    break;
-                }
+                    return false;
 
                 // If there's a number after it.
                 if(strAfter != null && !(Character.digit(strAfter.charAt(0),10) < 0))
-                {
-                    syntaxValid = false;
-                    break;
-                }
+                    return false;
 
                 // If there's no opening parentheses before it.
                 if(parenthesesCounter == 0)
-                {
-                    syntaxValid = false;
-                    break;
-                }
+                    return false;
 
-                // Decrement the parenthesesCounter and push onto operator stack.
+                // Decrement the parenthesesCounter.
                 parenthesesCounter--;
-                ops.push(str);
+
+                // Solve entire parentheses.
+                while(!ops.peek().equals("("))
+                    values.push(applyOp(ops.pop(), values.pop(), values.pop()));
+
+                // Remove the opening parenthesis from ops stack.
+                ops.pop();
             }
-            // If it's an operator (not minus sign).
-            else if(str.equals("+") || str.equals("*") ||
+
+            // If it's an operator.
+            else if(str.equals("+") || str.equals("-") || str.equals("*") ||
                     str.equals("/") || str.equals("^"))
             {
-                // If these are at the beginning or end.
-                if(i == 0 || i == expression.length()-1)
+                // If it's a negative sign.
+                if(str.equals("-") && isNegative(i))
                 {
-                    syntaxValid = false;
-                    break;
+                    // If this is at the end.
+                    if(i == expression.length()-1)
+                        return false;
+
+                    // Add the negative sign to number.
+                    number += str;
+                    i++;
+
+                    // Set the next str value.
+                    if(i < expression.length())
+                        str = expression.substring(i, i+1);
+
+                    // While the next value is a digit or a decimal.
+                    while(i < expression.length() && (!(Character.digit(str.charAt(0),10) < 0) || str.equals(".")))
+                    {
+                        // If the str is a decimal.
+                        if(str.equals("."))
+                        {
+                            // If there was a decimal found already or
+                            // if there's only a negative sign in number.
+                            if(decimalFound || number.length() == 1)
+                                return false;
+
+                            // Else if there's more than just a negative sign in number.
+                            else
+                                number += str;
+
+                            decimalFound = true;
+                        }
+
+                        // Else, just add the str to number.
+                        else
+                            number += str;
+
+                        // Increment i for the while loop.
+                        i++;
+
+                        // Set the next string value.
+                        if(i < expression.length())
+                            str = expression.substring(i, i+1);
+                    }
+
+                    // After exiting while loop, reset the i index to previous value for the For loop.
+                    i--;
+
+                    // If the number is a decimal value, add a zero to it.
+                    if(decimalFound)
+                        number += "0";
+
+                    // Reset the decimal flag to false.
+                    decimalFound = false;
+
+                    // Add the number to values stack.
+                    values.push(Double.parseDouble(number));
                 }
 
-                // If there's an operator before one of these operators.
-                if(strBefore != null && (strBefore.equals("+") || strBefore.equals("-") || strBefore.equals("/") ||
-                        strBefore.equals("*") || strBefore.equals("^") || strBefore.equals("(")))
+                // Else, if it's an operator.
+                else
                 {
-                    syntaxValid = false;
-                    break;
+                    // If these are at the beginning or end.
+                    if (i == 0 || i == expression.length() - 1)
+                        return false;
+
+                    // If there's an operator before one of these operators.
+                    if (strBefore != null && (strBefore.equals("+") || strBefore.equals("-") || strBefore.equals("/") ||
+                            strBefore.equals("*") || strBefore.equals("^") || strBefore.equals("(")))
+                        return false;
+
+                    // If there's an operator after one of these operators.
+                    if (strAfter != null && (strAfter.equals("+") || strAfter.equals("/") ||
+                            strAfter.equals("*") || strAfter.equals("^")) || strAfter.equals(")"))
+                        return false;
+
+                    // While the top of ops has the same or greater precedence to the minus sign.
+                    while (!ops.empty() && hasPrecedence(str, ops.peek()))
+                        values.push(applyOp(ops.pop(), values.pop(), values.pop()));
+
+                    // Push the operator onto the ops stack.
+                    ops.push(str);
                 }
-
-                // If there's an operator after one of these operators.
-                if(strAfter != null && (strAfter.equals("+") || strAfter.equals("/") ||
-                        strAfter.equals("*") || strAfter.equals("^")) || strAfter.equals(")"))
-                {
-                    syntaxValid = false;
-                    break;
-                }
-
-                ops.push(str);
-            }
-
-            // If it's a minus (-) sign.
-            else if(str.equals("-"))
-            {
-                // If this is at the end.
-                if(i == expression.length()-1)
-                {
-                    syntaxValid = false;
-                    break;
-                }
-
-                // If this is a negative sign (not an operator).
             }
 
             // Else, if the substring is not one of the qualified above characters
             else
-            {
-                syntaxValid = false;
-                break;
-            }
+                return false;
         }
 
         // Check the parenthesesCounter to make sure there are no
         // open or closed parentheses remaining.
         if (parenthesesCounter != 0)
-            syntaxValid = false;
+            return false;
+
+        // If there were no syntax errors so far, apply the remaining operators
+        // to the remaining values in the two stacks.
+        while(!ops.empty())
+            values.push(applyOp(ops.pop(), values.pop(), values.pop()));
+
+        // Store the final answer.
+        answer = values.pop();
+
+        // Return True if the evaluation was performed correctly
+        // without syntax errors.
+        return true;
     }
 
-    // This is for negative numbers only.
+
+    /*
+        Returns True if op2 has a higher or same precedence as op1.
+        Otherwise it return False.
+        @param  op1 The first operator.
+        @param  op2 The second operator.
+     */
+    public boolean hasPrecedence(String op1, String op2)
+    {
+        if(op2.equals("(") || op2.equals(")"))
+            return false;
+
+        if((op1.equals("*") || op1.equals("/")) && (op2.equals("+") || op2.equals("-")))
+            return false;
+
+        if(op1.equals("^") && (op2.equals("*") || op2.equals("/") || op2.equals("+") || op2.equals("-")))
+            return false;
+
+        else
+            return true;
+    }
+
+    /*
+        A utility method to apply an operator op on operands a and b.
+        Returns the result.
+        @param  op  The string operator.
+        @param  a   The first operand.
+        @param  b   The second operand.
+     */
+    public double applyOp(String op, double b, double a)
+    {
+        switch(op)
+        {
+            case "+":
+                return a + b;
+            case "-":
+                return a - b;
+            case "*":
+                return a * b;
+            case "/":
+                if (b == 0)
+                    throw new UnsupportedOperationException("Cannot Divide by Zero!");
+
+                return a / b;
+            case "^":
+                if(b == 0)
+                    return 1;
+
+                double number = a;
+                for(int i = 1; i < (int)Math.abs(b); i++)
+                {
+                    number *= a;
+                }
+
+                // If b was negative, divide 1 by number.
+                if(b < 0)
+                    number = 1.0/number;
+
+                return number;
+        }
+
+        return 0;
+    }
+
+
+    /*
+        This is for negative numbers only.
+        Checks to see if a minus sign is actually a negative sign.
+        @param  i   The index of the minus sign in expression string.
+     */
     boolean isNegative(int i)
     {
-        String str = expression.substring(i);
+        String str = expression.substring(i, i+1);
         String strBefore = null;
         String strAfter = null;
 
         if (i != 0)
-            strBefore = expression.substring(i-1);
+            strBefore = expression.substring(i-1, i);
         if (i != expression.length()-1)
-            strAfter = expression.substring(i+1);
+            strAfter = expression.substring(i+1, i+2);
 
-        // If there's a number before it, it's not negative.
-        if(strBefore != null && !(Character.digit(strAfter.charAt(0),10) < 0))
+        // If there's a number before it or a closing parentheses, it's not negative.
+        // The second argument will give TRUE if there's a number before it.
+        if(strBefore != null && (!(Character.digit(strBefore.charAt(0),10) < 0) || strBefore.equals(")")))
             return false;
 
-        // Else it's a negative.
+        // Check to make sure that, if there's no number after it, it's not negative.
+        // The second argument will give FALSE if there's a number after it.
+        if(strAfter != null && (Character.digit(strAfter.charAt(0),10) < 0))
+            return false;
+
+        // Else, if there's no numbers or ")" before and a number after it, it's a negative.
         return true;
     }
 }
