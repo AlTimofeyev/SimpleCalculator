@@ -6,27 +6,172 @@
 
 
 import java.util.Stack;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 
 public class SimpleCalculator
 {
     public static String expression;
-    public static Stack<Double> values = new Stack<Double>();
-    public static Stack<String> ops = new Stack<String>();
     public static double answer;
 
     public static void main(String[] args)
     {
-        expression = "((2+3/)(4/-";
-
-        if(new SimpleCalculator().evaluateExpression())
-            System.out.println("This is the answer: " + answer);
-        else
-            System.out.println("Syntax Error!");
+        new SimpleCalculator().run();
     }
 
-    // Format the expression and check for syntax errors.
-    public boolean evaluateExpression()
+    public void run()
     {
+        // Try to set the look and feel of the GUI.
+        try
+        {
+            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+        }
+        catch(Exception e)
+        {
+            e.printStackTrace();
+        }
+
+        // Use the GUI.
+        SwingUtilities.invokeLater(() -> {
+            calculatorGUI();
+        });
+    }
+
+    // ********************** METHODS BELOW **********************
+
+    /*
+        The GUI for this simple calculator.
+     */
+    public void calculatorGUI()
+    {
+        // Set the text area where the Arithmetic Expression will be typed.
+        JTextArea arithmeticTextArea = new JTextArea(5,20);
+        arithmeticTextArea.setText(null);
+        arithmeticTextArea.setLineWrap(true);
+        arithmeticTextArea.setWrapStyleWord(true);
+        arithmeticTextArea.setMargin(new Insets(5, 5, 5, 5));
+        arithmeticTextArea.setFont(new Font("", 0, 19));
+
+        // Label for this text area.
+        JLabel arithmeticTextLabel = new JLabel("Arithmetic Expression");
+        arithmeticTextLabel.setFont(new Font("", Font.BOLD, 16));
+        arithmeticTextLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
+        // Now place it into its own panel.
+        JPanel arithmeticTextPanel = new JPanel();
+        arithmeticTextPanel.setLayout(new BorderLayout());
+        arithmeticTextPanel.add(arithmeticTextLabel, BorderLayout.NORTH);
+        arithmeticTextPanel.add(new JScrollPane(arithmeticTextArea), BorderLayout.CENTER);
+
+        // Set the text are where the answer will be displayed.
+        JTextArea answerTextArea = new JTextArea();
+        answerTextArea.setText(null);
+        answerTextArea.setLineWrap(true);
+        answerTextArea.setWrapStyleWord(true);
+        answerTextArea.setMargin(new Insets(5, 5, 5, 5));
+        answerTextArea.setEditable(false);  // Make answer uneditable.
+        answerTextArea.setBackground(new Color(241, 241, 241));
+        answerTextArea.setFont(new Font("", 0, 20));
+
+        // Label for this text area.
+        JLabel answerTextLabel = new JLabel("Answer");
+        answerTextLabel.setFont(new Font("", Font.BOLD, 16));
+        answerTextLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
+        // Now place it into its own panel.
+        JPanel answerTextPanel = new JPanel();
+        answerTextPanel.setLayout(new BorderLayout());
+        answerTextPanel.add(answerTextLabel, BorderLayout.NORTH);
+        answerTextPanel.add(new JScrollPane(answerTextArea), BorderLayout.CENTER);
+
+        // Place arithmetic/answer Text Panels into one control panel.
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, arithmeticTextPanel, answerTextPanel);
+
+        // Create the two buttons needed for this GUI.
+        JButton calculateButton = new JButton("Calculate");
+        calculateButton.setPreferredSize(new Dimension(100,50));
+        calculateButton.setFont(new Font("", Font.PLAIN, 16));
+        JButton clearButton = new JButton("Clear");
+        clearButton.setPreferredSize(new Dimension(100,50));
+        clearButton.setFont(new Font("", Font.PLAIN, 16));
+
+        // Set the spot where these two buttons will be located in their own panel.
+        JPanel buttonControlPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        buttonControlPanel.add(calculateButton);
+        buttonControlPanel.add(clearButton);
+
+        // Place everything into one JPanel.
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.add(splitPane, BorderLayout.CENTER);
+        mainPanel.add(buttonControlPanel, BorderLayout.SOUTH);
+
+        // Add button listeners.
+        calculateButton.addActionListener((e) -> {
+            expression = arithmeticTextArea.getText().trim();
+            try
+            {
+                if (evaluateExpression())
+                    answerTextArea.setText(Double.toString(answer));
+                else
+                    answerTextArea.setText("SYNTAX ERROR!!");
+            }
+            catch(UnsupportedOperationException exception)
+            {
+                answerTextArea.setText("Cannot Divide By Zero!!");
+            }
+        });
+
+        clearButton.addActionListener((e) -> {
+            arithmeticTextArea.setText(null);
+            answerTextArea.setText(null);
+            answerTextArea.setCaretPosition(0);
+            arithmeticTextArea.requestFocus();
+        });
+
+        // Add a Key Listener for the Enter key.
+        arithmeticTextArea.addKeyListener(new KeyAdapter(){
+            @Override
+            public void keyPressed(KeyEvent e)
+            {
+                // If the Enter key is pressed, press calculate button.
+                if(e.getKeyCode() == KeyEvent.VK_ENTER)
+                {
+                    calculateButton.doClick();
+                    e.consume(); // Consumes the newline character.
+                }
+            }
+        });
+
+        // Make the Frame.
+        JFrame frame = new JFrame();
+        frame.setTitle("Simple Calculator");
+        frame.setLayout(new BorderLayout());
+        frame.add(mainPanel, BorderLayout.CENTER);
+        frame.setSize(new Dimension(800, 300));
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setLocationRelativeTo(null);
+        frame.setResizable(false);
+        frame.setVisible(true);
+
+        splitPane.setDividerLocation(frame.getWidth() / 2);
+    }
+
+    /*
+        Evaluate the expression while checking the syntax.
+     */
+    private boolean evaluateExpression()
+    {
+        // Make sure that the expression isn't null!!
+        if(expression.length() == 0 || expression == null)
+        {
+            answer = 0;
+            return true;
+        }
+
+        Stack<Double> values = new Stack<Double>();
+        Stack<String> ops = new Stack<String>();
         String number;
         String str;
         String strBefore = null;
@@ -261,7 +406,7 @@ public class SimpleCalculator
         @param  op1 The first operator.
         @param  op2 The second operator.
      */
-    public boolean hasPrecedence(String op1, String op2)
+    private boolean hasPrecedence(String op1, String op2)
     {
         if(op2.equals("(") || op2.equals(")"))
             return false;
@@ -283,7 +428,7 @@ public class SimpleCalculator
         @param  a   The first operand.
         @param  b   The second operand.
      */
-    public double applyOp(String op, double b, double a)
+    private double applyOp(String op, double b, double a)
     {
         switch(op)
         {
@@ -324,7 +469,7 @@ public class SimpleCalculator
         Checks to see if a minus sign is actually a negative sign.
         @param  i   The index of the minus sign in expression string.
      */
-    boolean isNegative(int i)
+    private boolean isNegative(int i)
     {
         String str = expression.substring(i, i+1);
         String strBefore = null;
