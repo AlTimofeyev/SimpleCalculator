@@ -1,7 +1,8 @@
 /**
  * @Author: Al Timofeyev
  * @Date:   Oct 26, 2018
- * @Desc:
+ * @Desc:   A simple calculator application that performs arithmetic
+ *          using -, +, /, *, and ^. Following rules of PEMDAS.
  */
 
 
