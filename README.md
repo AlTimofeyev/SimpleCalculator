@@ -2,7 +2,6 @@
 This is a simple calculator implementation for CWU class CS 480 - Adv. Soft. Engineering. End result is an executable (.exe) file.
 
 # hello9
-<br />
 
 Author: Al Timofeyev
 <br />
