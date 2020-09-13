@@ -1,9 +1,9 @@
 # SimpleCalculator
 This is a simple calculator implementation for CWU class CS 480 - Adv. Soft. Engineering. End result is an executable (.exe) file.
 
-# hello8
+# hello9
 <br />
-<br />
+
 Author: Al Timofeyev
 <br />
 Date: September 12, 2020
